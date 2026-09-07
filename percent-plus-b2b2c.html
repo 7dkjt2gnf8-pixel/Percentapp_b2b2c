@@ -503,7 +503,7 @@
           <input type="text" inputmode="decimal" id="siegeInput" value="1.68" style="font-size:17px; padding:8px 6px;">
         </div>
         <div style="flex:1;">
-          <label for="reseauInput" id="lblReseauDefault" style="font-size:11px; display:block; text-align:center;">Coef réseau</label>
+          <label for="reseauInput" id="lblReseauDefault" style="font-size:11px; display:block; text-align:center;">Coef distributeur</label>
           <input type="text" inputmode="decimal" id="reseauInput" value="1.68" style="font-size:17px; padding:8px 6px;">
         </div>
       </div>
@@ -564,20 +564,6 @@
         <button type="button" id="btnThemeLight">Clair</button>
         <button type="button" id="btnThemeDark">Sombre</button>
         <button type="button" id="btnThemeAuto">Système</button>
-      </div>
-      <div class="switchRow" style="margin-top:14px;">
-        <span class="switchLabel" id="lblVibrations">Vibrations</span>
-        <label class="iosSwitch">
-          <input type="checkbox" id="chkVibrations" checked>
-          <span class="iosSlider"></span>
-        </label>
-      </div>
-      <div class="switchRow" style="margin-top:14px;">
-        <span class="switchLabel" id="lblVibrations">Vibrations</span>
-        <label class="iosSwitch">
-          <input type="checkbox" id="chkVibrations" checked>
-          <span class="iosSlider"></span>
-        </label>
       </div>
       <div style="font-size:11px; color:#6f6d67; margin-top:16px; text-align:center;">Designed by Mienos</div>
       <div class="modalBtns">
@@ -762,7 +748,7 @@
       <div class="pctRow" id="rowRevient"><span style="display:flex; align-items:center;"><span class="lockBtn" id="lockRevient" data-field="revient">🔓</span><span class="lbl" id="lblRevientRow">Prix de revient :</span></span><span class="val editableVal" id="valRevient">—</span></div>
       <div class="pctRow" id="rowSiege"><span style="display:flex; align-items:center;"><span class="lockBtn" id="lockSiege" data-field="siege">🔒</span><span class="lbl" id="lblSiegeRow">Coef siège :</span></span><span style="display:flex; align-items:baseline; gap:6px;"><span class="coefHint" id="hintSiege"></span><span class="val editableVal" id="valSiege">—</span></span></div>
       <div class="pctRow" id="rowPvReseau"><span style="display:flex; align-items:center;"><span class="lockBtn" id="lockPvReseau" data-field="pvReseau">🔓</span><span class="lbl" id="lblPvReseauRow">PV distributeur :</span></span><span class="val editableVal" id="valPvReseau">—</span></div>
-      <div class="pctRow" id="rowReseau"><span style="display:flex; align-items:center;"><span class="lockBtn" id="lockReseau" data-field="reseau">🔒</span><span class="lbl" id="lblReseauRow">Coef réseau :</span></span><span style="display:flex; align-items:baseline; gap:6px;"><span class="coefHint" id="hintReseau"></span><span class="val editableVal" id="valReseau">—</span></span></div>
+      <div class="pctRow" id="rowReseau"><span style="display:flex; align-items:center;"><span class="lockBtn" id="lockReseau" data-field="reseau">🔒</span><span class="lbl" id="lblReseauRow">Coef distributeur :</span></span><span style="display:flex; align-items:baseline; gap:6px;"><span class="coefHint" id="hintReseau"></span><span class="val editableVal" id="valReseau">—</span></span></div>
       <div class="pctRow" id="rowPvHt" style="cursor:default;"><span class="lbl" id="lblPvHtRow" style="padding-left:28px;">PV public HT :</span><span class="val" id="valPvHt">—</span></div>
       <div class="pctRow" id="rowPvTtc"><span style="display:flex; align-items:center;"><span class="lockBtn" id="lockPvTtc" data-field="pvPublicTTC">🔓</span><span class="lbl" id="lblPvTtcRow">PV public TTC :</span></span><span class="val editableVal" id="valPvTtc">—</span></div>
     </div>
@@ -904,7 +890,6 @@
   const lblModes = document.getElementById('lblModes');
   const chkMarginEnabled = document.getElementById('chkMarginEnabled');
   const chkDesjEnabled = document.getElementById('chkDesjEnabled');
-  const chkVibrations = document.getElementById('chkVibrations');
   const lblMarginToggle = document.getElementById('lblMarginToggle');
   const lblDesjToggle = document.getElementById('lblDesjToggle');
   const txtSettingsTitle = document.getElementById('txtSettingsTitle');
@@ -2579,7 +2564,6 @@
     reseauInput.value = defaultReseau;
     chkMarginEnabled.checked = marginModeEnabled;
     chkDesjEnabled.checked = desjModeEnabled;
-    chkVibrations.checked = vibrationsEnabled;
     updateDecimalsUI();
     updateCurrencyUI();
     renderPresetChips();
@@ -2774,7 +2758,7 @@
       settingsTitle: 'Paramètres',
       vatLabel: 'Taux de TVA (%)',
       siegeDefaultLabel: 'Coef Siège',
-      reseauDefaultLabel: 'Coef réseau',
+      reseauDefaultLabel: 'Coef distributeur',
       themeLabel: 'Thème',
       themeLight: 'Clair',
       themeDark: 'Sombre',
@@ -2864,7 +2848,7 @@
       histCoefWord: 'coef',
       histAtVat: '•TVA',
       siegeLabel: 'Coef siège :',
-      reseauLabel: 'Coef réseau :',
+      reseauLabel: 'Coef distributeur :',
       pvReseauLabel: 'PV distributeur :',
       pvHtLabel: 'PV public HT :',
       pvTtcLabel: 'PV TTC'
@@ -2963,7 +2947,7 @@
       histCoefWord: 'coef',
       histAtVat: '•VAT',
       siegeLabel: 'HQ coef:',
-      reseauLabel: 'Network coef:',
+      reseauLabel: 'Distributor coef:',
       pvReseauLabel: 'Distributor price:',
       pvHtLabel: 'Public price excl. VAT:',
       pvTtcLabel: 'Public price'
