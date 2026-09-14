@@ -1086,10 +1086,6 @@
     historyLog.innerHTML = '';
     history.forEach(h => appendHistoryLine(h, false));
     scrollHistoryToBottom();
-    // Catch any late reflow (web fonts, the Desjoyaux logo image, or the
-    // PWA's safe-area insets settling in) that can still shift the layout
-    // after the very first frame, especially on a cold app launch.
-    setTimeout(scrollHistoryToBottom, 300);
   }
   function scrollHistoryToBottom(){
     requestAnimationFrame(() => { historyLog.scrollTop = historyLog.scrollHeight; });
@@ -3115,7 +3111,23 @@
   applyLanguage(savedLang);
 
   layoutEquals();
+  // Cold-start history scroll: the layout (safe-area insets, fonts, the
+  // B2B2C picto images) isn't always fully settled the instant this runs
+  // on a real device, which can leave the scroll position slightly short.
+  // Instead of visibly snapping into place afterward, keep the history
+  // hidden while we settle it, then fade it in already correctly scrolled.
+  historyLog.style.opacity = '0';
   renderHistoryInitial();
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      historyLog.scrollTop = historyLog.scrollHeight;
+      setTimeout(() => {
+        historyLog.scrollTop = historyLog.scrollHeight;
+        historyLog.style.transition = 'opacity .18s ease';
+        historyLog.style.opacity = '1';
+      }, 120);
+    });
+  });
 
   // ---- Keypad drag handle: swipe down from the handle bar to collapse the
   // keypad and free up space for the history above (and back up to restore
