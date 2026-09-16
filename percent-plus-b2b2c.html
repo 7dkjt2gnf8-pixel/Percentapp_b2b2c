@@ -778,6 +778,11 @@
       <div class="pctRow" id="rowPvHt" style="cursor:default;"><span class="lbl" id="lblPvHtRow" style="padding-left:28px;">PV public HT :</span><span class="val" id="valPvHt">—</span></div>
       <div class="pctRow" id="rowPvTtc"><span style="display:flex; align-items:center;"><span class="lockBtn" id="lockPvTtc" data-field="pvPublicTTC">🔓</span><span class="lbl" id="lblPvTtcRow">PV public TTC :</span></span><span class="val editableVal" id="valPvTtc">—</span></div>
     </div>
+    <div id="currencySection" class="inputPanel" style="display:none;">
+      <div class="pctRow" id="rowCurrRate"><span class="lbl" id="lblCurrRate"><span id="currRateLabelText">Taux</span> <span class="htTtcSwitch" id="currModeSwitch"><span class="htTtcOption" id="optManual">Manuel</span><span class="htTtcOption" id="optLive">Live</span></span> :</span><span class="val editableVal" id="valCurrRate">—</span></div>
+      <div class="pctRow" id="rowEur"><span class="lbl" id="lblEurRow">EUR :</span><span class="val editableVal" id="valEur">—</span></div>
+      <div class="pctRow" id="rowUsd"><span class="lbl" id="lblUsdRow">USD :</span><span class="val editableVal" id="valUsd">—</span></div>
+    </div>
   </div>
 
   <!-- ===== KEYPAD DRAG HANDLE (swipe down from here to collapse the keypad) ===== -->
@@ -813,7 +818,7 @@
     <button class="key" data-a="dot" id="keyDot">,</button>
     <button class="key op" data-a="sign" style="font-size:28px;">±</button>
     <button class="key op" data-a="back" id="keyBack" style="font-size:26px;">⌫</button>
-    <button class="key arith" data-a="op" data-v="+">+</button>
+    <button class="key arith" data-a="op" data-v="+"><span id="lblPlus">+</span></button>
 
     <button class="key amber" data-a="tvaplus" id="keyTvaPlus"><span id="lblTvaPlus">TVA+</span><span class="sub" id="vatSubPlus">20%</span></button>
     <button class="key amber" data-a="tvaminus" id="keyTvaMinus">
@@ -878,6 +883,7 @@
   const keyEquals = document.getElementById('keyEquals');
   const lblMultiply = document.getElementById('lblMultiply');
   const lblMinus = document.getElementById('lblMinus');
+  const lblPlus = document.getElementById('lblPlus');
   const lblDivide = document.getElementById('lblDivide');
   const opButtons = document.querySelectorAll('.keypad [data-a="op"]');
   const tvaMinusButtons = document.querySelectorAll('.keypad [data-a="tvaminus"]');
@@ -950,6 +956,17 @@
   const rowMarge = document.getElementById('rowMarge');
   const rowVente = document.getElementById('rowVente');
   const desjSection = document.getElementById('desjSection');
+  const currencySection = document.getElementById('currencySection');
+  const currModeSwitch = document.getElementById('currModeSwitch');
+  const optManual = document.getElementById('optManual');
+  const optLive = document.getElementById('optLive');
+  const currRateLabelText = document.getElementById('currRateLabelText');
+  const rowCurrRate = document.getElementById('rowCurrRate');
+  const valCurrRate = document.getElementById('valCurrRate');
+  const rowEur = document.getElementById('rowEur');
+  const valEur = document.getElementById('valEur');
+  const rowUsd = document.getElementById('rowUsd');
+  const valUsd = document.getElementById('valUsd');
   const rowRevient = document.getElementById('rowRevient');
   const rowSiege = document.getElementById('rowSiege');
   const rowReseau = document.getElementById('rowReseau');
@@ -1316,6 +1333,13 @@
     if(!isNaN(savedVat) && savedVat >= 0) vatRate = savedVat;
   } catch(e){}
 
+  const USD_RATE_KEY = 'percentplus_usdRate';
+  let usdRate = 1.08; // approximate EUR→USD; user-editable in Settings
+  try {
+    const savedUsdRate = parseFloat(localStorage.getItem(USD_RATE_KEY));
+    if(!isNaN(savedUsdRate) && savedUsdRate > 0) usdRate = savedUsdRate;
+  } catch(e){}
+
   // ---- Display decimal places (display only, calculations stay full precision) ----
   const DECIMALS_KEY = 'percentplus_decimals';
   let displayDecimals = 5;
@@ -1422,13 +1446,33 @@
     const len = liveExpr.length;
     const fontSize = len <= 12 ? 32 : Math.max(15, 32 - (len - 12) * 0.55);
     mainVal.style.fontSize = fontSize + 'px';
-    mainRow.style.display = (marginArmed || desjArmed || pctArmed || historyFullscreen || keypadCollapsed) ? 'none' : 'block';
+    mainRow.style.display = (marginArmed || desjArmed || pctArmed || currencyArmed || historyFullscreen || keypadCollapsed) ? 'none' : 'block';
 
     pctSection.style.display = (pctArmed && !historyFullscreen && !keypadCollapsed) ? 'block' : 'none';
     marginSection.style.display = (marginArmed && !historyFullscreen && !keypadCollapsed) ? 'block' : 'none';
     desjSection.style.display = (desjArmed && !historyFullscreen && !keypadCollapsed) ? 'block' : 'none';
+    currencySection.style.display = (currencyArmed && !historyFullscreen && !keypadCollapsed) ? 'block' : 'none';
+    if(currencyArmed){
+      optManual.classList.toggle('active', currencyMode === 'manual');
+      optLive.classList.toggle('active', currencyMode === 'live');
+      rowCurrRate.style.cursor = currencyMode === 'manual' ? 'pointer' : 'default';
+      rowCurrRate.classList.toggle('rowBlocked', currencyMode !== 'manual');
+      if(currencyMode === 'live'){
+        valCurrRate.textContent = liveRateStatus === 'loading' ? t('rateLoading') : (liveRateStatus === 'error' ? t('rateError') : fmtDisp(usdRate));
+      } else {
+        valCurrRate.textContent = currencyRowDisplay('rate');
+      }
+      valEur.textContent = currencyRowDisplay('eur');
+      valUsd.textContent = currencyRowDisplay('usd');
+      rowCurrRate.classList.toggle('active', currencyActiveField === 'rate');
+      rowEur.classList.toggle('active', currencyActiveField === 'eur');
+      rowUsd.classList.toggle('active', currencyActiveField === 'usd');
+    }
+    const currEurNow = parseFloat(currencyRowDisplay('eur').replace(',', '.')) || 0;
+    const currUsdNow = parseFloat(currencyRowDisplay('usd').replace(',', '.')) || 0;
+    keyEquals.classList.toggle('disabledKey', currencyArmed && (currEurNow === 0 || currUsdNow === 0));
     pctDivider.style.display = 'none';
-    keyEquals.textContent = pctArmed ? 'Δ=' : (marginArmed ? (marginMode === 'remise' ? t('remiseEquals') : (marginMode === 'compensation' ? t('compensationEquals') : t('marginEquals'))) : (desjArmed ? t('desjEquals') : '='));
+    keyEquals.textContent = pctArmed ? 'Δ=' : (marginArmed ? (marginMode === 'remise' ? t('remiseEquals') : (marginMode === 'compensation' ? t('compensationEquals') : t('marginEquals'))) : (desjArmed ? t('desjEquals') : (currencyArmed ? t('currencyEquals') : '=')));
 
     valDe.textContent = pctArmed ? fieldDisplay('de') : "—";
     valTo.textContent = pctArmed ? fieldDisplay('to') : "—";
@@ -1590,18 +1634,20 @@
     vatSubPlus.textContent = fmt(vatRate) + '%';
     vatSubMinus.textContent = fmt(vatRate) + '%';
 
-    const anyArmed = pctArmed || marginArmed || desjArmed;
+    const anyArmed = pctArmed || marginArmed || desjArmed || currencyArmed;
     const coefAdjustActive = getAdjustStep() !== null;
     const opsDisabled = anyArmed || (tokens.length === 0 && cur === "0");
     const divideIsGear = opsDisabled && !coefAdjustActive;
     const multiplyIsZoom = opsDisabled && !coefAdjustActive;
     const minusIsShare = opsDisabled && !coefAdjustActive;
     const shareAvailable = minusIsShare && history.length > 0;
+    const plusIsCurrency = !anyArmed && tokens.length === 0 && (cur === "0" || justEvaluated);
     opButtons.forEach(el => {
       const isMulDiv = el.dataset.v === '×' || el.dataset.v === '÷';
       const isDivide = el.dataset.v === '÷';
       const isMultiply = el.dataset.v === '×';
       const isMinus = el.dataset.v === '−';
+      const isPlus = el.dataset.v === '+';
       if(coefAdjustActive && isMulDiv){
         el.classList.remove('disabledKey');
       } else if(isDivide && divideIsGear){
@@ -1610,6 +1656,8 @@
         el.classList.remove('disabledKey');
       } else if(isMinus && shareAvailable){
         el.classList.remove('disabledKey');
+      } else if(isPlus && plusIsCurrency){
+        el.classList.remove('disabledKey');
       } else {
         el.classList.toggle('disabledKey', opsDisabled);
       }
@@ -1617,6 +1665,7 @@
     lblDivide.innerHTML = coefAdjustActive ? '▲' : (divideIsGear ? gearKeySVG : '÷');
     lblMultiply.innerHTML = coefAdjustActive ? '▼' : (multiplyIsZoom ? zoomKeySVG : '×');
     lblMinus.innerHTML = minusIsShare ? shareKeySVG : '−';
+    lblPlus.innerHTML = plusIsCurrency ? currencyKeySVG : '+';
     const tvaMinusDisabled = anyArmed;
     tvaMinusButtons.forEach(el => el.classList.toggle('disabledKey', tvaMinusDisabled));
     const tvaPlusDisabled = anyArmed;
@@ -1784,6 +1833,10 @@
   let marginArmed = false;
   let marginMode = 'marge'; // 'marge' | 'remise' | 'compensation'
   let keypadCollapsed = false; // declared early: referenced by render(), which runs during applyLanguage() at startup
+  let currencyArmed = false;
+  let currencyMode = 'manual'; // 'manual' | 'live'
+  let currencyActiveField = 'eur'; // 'eur' | 'usd' | 'rate'
+  let liveRateStatus = 'idle'; // 'idle' | 'loading' | 'ok' | 'error'
   let venteIsTTC = false; // in 'marge' mode only: whether the Vente field is entered/shown as TTC
   let marginBuffersByMode = {
     marge: { cost: "0", vente: "0", marge: "0" },
@@ -1939,6 +1992,95 @@
     marginBuffers = marginBuffersByMode[marginMode];
     marginActiveField = 'cost';
     marginPrevField = 'marge';
+  }
+  let currencyAnchorField = 'eur'; // which of eur/usd was last actively edited — used as the fixed basis while editing the rate
+  let currencyAnchorValue = 0;
+  function armCurrencyEntry(){
+    currencyActiveField = 'eur';
+    currencyAnchorField = 'eur';
+    currencyAnchorValue = 0;
+    cur = "0"; justEntered = false; justEvaluated = false; tokens = [];
+    currencyArmed = true;
+    setArmedUI(true);
+    render();
+    scrollHistoryToBottom();
+  }
+  // EUR/USD are computed live from whichever field is active + the current
+  // rate. While editing the rate itself, they're computed from the anchor
+  // (the last EUR/USD value actually typed) combined with the live rate
+  // being typed, so they keep updating instead of dropping to 0.
+  function currencyRowDisplay(field){
+    if(field === currencyActiveField) return toDispNum(cur);
+    const curNum = parseFloat(cur.replace(',', '.')) || 0;
+    if(currencyActiveField === 'rate'){
+      const liveRate = curNum > 0 ? curNum : usdRate;
+      if(field === 'eur') return currencyAnchorField === 'eur' ? fmtDisp(currencyAnchorValue) : fmtDisp(liveRate ? currencyAnchorValue / liveRate : 0);
+      if(field === 'usd') return currencyAnchorField === 'usd' ? fmtDisp(currencyAnchorValue) : fmtDisp(currencyAnchorValue * liveRate);
+    }
+    if(field === 'eur') return currencyActiveField === 'usd' ? fmtDisp(usdRate ? curNum / usdRate : 0) : fmtDisp(0);
+    if(field === 'usd') return currencyActiveField === 'eur' ? fmtDisp(curNum * usdRate) : fmtDisp(0);
+    if(field === 'rate') return fmtDisp(usdRate);
+    return '0';
+  }
+  function switchCurrencyField(field){
+    if(!currencyArmed || currencyActiveField === field) return;
+    if(field === 'rate' && currencyMode !== 'manual') return;
+    const curNum = parseFloat(cur.replace(',', '.')) || 0;
+    let newCur = "0";
+    if(currencyActiveField === 'rate'){
+      if(curNum > 0) usdRate = curNum;
+      // leaving the rate field: rebuild eur/usd from the anchor + new rate
+      if(field === 'eur'){
+        newCur = currencyAnchorField === 'eur' ? fmt(currencyAnchorValue) : fmt(usdRate ? currencyAnchorValue / usdRate : 0);
+      } else {
+        newCur = currencyAnchorField === 'usd' ? fmt(currencyAnchorValue) : fmt(currencyAnchorValue * usdRate);
+      }
+    } else if(currencyActiveField === 'eur' && field === 'usd'){
+      newCur = fmt(curNum * usdRate);
+      currencyAnchorField = 'eur'; currencyAnchorValue = curNum;
+    } else if(currencyActiveField === 'usd' && field === 'eur'){
+      newCur = fmt(usdRate ? curNum / usdRate : 0);
+      currencyAnchorField = 'usd'; currencyAnchorValue = curNum;
+    } else if(field === 'rate'){
+      currencyAnchorField = currencyActiveField;
+      currencyAnchorValue = curNum;
+      newCur = fmt(usdRate);
+    }
+    currencyActiveField = field;
+    cur = newCur;
+    justEntered = true; justEvaluated = false;
+    render();
+  }
+  async function fetchLiveRate(){
+    liveRateStatus = 'loading';
+    render();
+    try {
+      const res = await fetch('https://open.er-api.com/v6/latest/EUR');
+      const data = await res.json();
+      if(data && data.rates && data.rates.USD){
+        usdRate = data.rates.USD;
+        liveRateStatus = 'ok';
+      } else {
+        liveRateStatus = 'error';
+      }
+    } catch(e){
+      liveRateStatus = 'error';
+    }
+    render();
+  }
+  function finalizeCurrencyEntry(){
+    const curNum = parseFloat(cur.replace(',', '.')) || 0;
+    if(currencyActiveField === 'rate' && curNum > 0) usdRate = curNum;
+    const eurVal = currencyActiveField === 'usd' ? (usdRate ? curNum / usdRate : 0) : (currencyActiveField === 'eur' ? curNum : parseFloat(currencyRowDisplay('eur').replace(',','.')) || 0);
+    const usdVal = currencyActiveField === 'eur' ? curNum * usdRate : (currencyActiveField === 'usd' ? curNum : parseFloat(currencyRowDisplay('usd').replace(',','.')) || 0);
+    currencyArmed = false;
+    setArmedUI(false);
+    pushHistory(`${fmtDisp(eurVal)} € = ${mark(fmtDisp(usdVal))} $ (${fmtDisp(usdRate)})`, usdVal, { htype: 'tva' });
+    tokens = [];
+    cur = fmt(usdVal);
+    justEntered = false; justEvaluated = true;
+    triggerPulse();
+    render();
   }
   function armMarginEntry(){
     resetMarginBuffers();
@@ -2317,6 +2459,7 @@
     if(pctArmed){ finalizePctEntry(); return; }
     if(marginArmed){ finalizeMarginEntry(); return; }
     if(desjArmed){ finalizeDesjEntry(); return; }
+    if(currencyArmed){ finalizeCurrencyEntry(); return; }
     if(tokens.length === 0) return;
     const evalTokens = buildEvalTokens();
     const result = evaluateTokens(evalTokens);
@@ -2342,6 +2485,7 @@
     if(pctArmed){ pctArmed = false; setArmedUI(false); }
     if(marginArmed){ marginArmed = false; setArmedUI(false); }
     if(desjArmed){ desjArmed = false; setArmedUI(false); }
+    if(currencyArmed){ currencyArmed = false; setArmedUI(false); }
     render();
   }
 
@@ -2430,6 +2574,7 @@
       else if(v === '÷' && adjStep === null && ((pctArmed||marginArmed||desjArmed) || (tokens.length===0 && cur==="0"))) setTimeout(openModal, 0);
       else if(v === '×' && adjStep === null && ((pctArmed||marginArmed||desjArmed) || (tokens.length===0 && cur==="0"))) setTimeout(toggleHistoryFullscreen, 0);
       else if(v === '−' && adjStep === null && ((pctArmed||marginArmed||desjArmed) || (tokens.length===0 && cur==="0")) && history.length > 0) setTimeout(shareHistory, 0);
+      else if(v === '+' && adjStep === null && !(pctArmed||marginArmed||desjArmed) && tokens.length===0 && (cur==="0" || justEvaluated)) armCurrencyEntry();
       else setOp(v);
     }
     else if(a === 'equals') equals();
@@ -2498,6 +2643,19 @@
   btnMmodeCompensation.addEventListener('click', ()=>switchMarginMode('compensation'));
   htTtcSwitch.addEventListener('click', (e) => { e.stopPropagation(); venteIsTTC = !venteIsTTC; render(); });
   rowVente.addEventListener('click', ()=>switchMarginField('vente'));
+  rowCurrRate.addEventListener('click', ()=>switchCurrencyField('rate'));
+  rowEur.addEventListener('click', ()=>switchCurrencyField('eur'));
+  rowUsd.addEventListener('click', ()=>switchCurrencyField('usd'));
+  currModeSwitch.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if(currencyMode === 'manual'){
+      currencyMode = 'live';
+      fetchLiveRate();
+    } else {
+      currencyMode = 'manual';
+      render();
+    }
+  });
   rowRevient.addEventListener('click', ()=>switchDesjField('revient'));
   rowSiege.addEventListener('click', ()=>switchDesjField('siege'));
   rowReseau.addEventListener('click', ()=>switchDesjField('reseau'));
@@ -2654,6 +2812,7 @@
   });
 
   const zoomKeySVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15.5" y2="15.5"/><line x1="10" y1="7" x2="10" y2="13"/><line x1="7" y1="10" x2="13" y2="10"/></svg>';
+  const currencyKeySVG = '<svg viewBox="0 0 34 16" style="width:72%; height:auto; display:block; margin:0 auto;"><text x="17" y="8" text-anchor="middle" dominant-baseline="central" font-size="14" fill="currentColor" font-weight="700" font-family="Arial,sans-serif">€/$</text></svg>';
   const shareKeySVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/></svg>';
   const gearKeySVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
   const expandSVG = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15.5" y2="15.5"/><line x1="10" y1="7" x2="10" y2="13"/><line x1="7" y1="10" x2="13" y2="10"/></svg>';
@@ -2893,6 +3052,16 @@
       compensationImpossible: 'Vente à perte',
       margeModeBtn: 'Marge',
       compensationModeBtn: 'Compenser',
+      currManualBtn: 'Manuel',
+      currLiveBtn: 'Live',
+      currRateLabel: 'Taux :',
+      eurLabel: 'EUR :',
+      usdLabel: 'USD :',
+      currencyEquals: 'Convertir=',
+      liveRateNote: 'taux live',
+      manualRateNote: 'taux manuel',
+      rateLoading: '...',
+      rateError: 'Erreur',
       remiseModeBtn: 'Remise',
       ofWord: 'de',
       desjBtn: 'B2B2C',
@@ -2992,6 +3161,16 @@
       compensationImpossible: 'Selling at a loss',
       margeModeBtn: 'Margin',
       compensationModeBtn: 'Offset',
+      currManualBtn: 'Manual',
+      currLiveBtn: 'Live',
+      currRateLabel: 'Rate:',
+      eurLabel: 'EUR:',
+      usdLabel: 'USD:',
+      currencyEquals: 'Convert=',
+      liveRateNote: 'live rate',
+      manualRateNote: 'manual rate',
+      rateLoading: '...',
+      rateError: 'Error',
       remiseModeBtn: 'Discount',
       ofWord: 'of',
       desjBtn: 'B2B2C',
@@ -3072,6 +3251,11 @@
     btnMmodeMarge.textContent = t('margeModeBtn');
     btnMmodeRemise.textContent = t('remiseModeBtn');
     btnMmodeCompensation.textContent = t('compensationModeBtn');
+    optManual.textContent = t('currManualBtn');
+    optLive.textContent = t('currLiveBtn');
+    currRateLabelText.textContent = t('currRateLabel').replace(/\s*:$/, '');
+    document.getElementById('lblEurRow').textContent = t('eurLabel');
+    document.getElementById('lblUsdRow').textContent = t('usdLabel');
     lblCostRow.textContent = t('costLabel');
     lblMargeRow.textContent = t('margeLabel');
     lblProfitRow.textContent = t('profitLabel');
